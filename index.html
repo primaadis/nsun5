@@ -3,50 +3,328 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Naruto Ultimate Ninja Heroes 2</title>
+  <title>Nusantara Live Train Radar (168Railway Style)</title>
 
-  <!-- Skrip pendukung Threads PSP -->
-  <script src="coi-serviceworker.js"></script>
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
   <style>
-    body, html {
-      margin: 0;
-      padding: 0;
-      width: 100%;
-      height: 100%;
-      background-color: #000;
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body, html { width: 100%; height: 100%; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0b0f19; color: #fff; overflow: hidden; }
+
+    #map { width: 100%; height: 100%; z-index: 1; }
+
+    /* Top Radar HUD Bar */
+    .top-bar {
+      position: absolute;
+      top: 15px; left: 15px; right: 15px;
+      z-index: 1000;
       display: flex;
-      justify-content: center;
+      justify-content: space-between;
       align-items: center;
-      overflow: hidden;
+      background: rgba(11, 15, 25, 0.9);
+      backdrop-filter: blur(12px);
+      padding: 10px 18px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.6);
     }
-    #game-container {
-      width: 100%;
-      height: 100%;
-      max-width: 1280px;
-      max-height: 720px;
+    .brand { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 1.05rem; }
+    .brand span { color: #f97316; } /* KAI Orange */
+    .search-box input {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      padding: 6px 12px;
+      color: #fff;
+      font-size: 0.85rem;
+      outline: none;
+      width: 200px;
+    }
+    .clock-badge { font-family: monospace; font-size: 0.95rem; color: #38bdf8; font-weight: bold; }
+
+    /* Left Sidebar: Live Train List */
+    .sidebar {
+      position: absolute;
+      top: 75px; left: 15px; bottom: 20px;
+      width: 320px;
+      background: rgba(11, 15, 25, 0.92);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+    .sidebar-header {
+      padding: 12px 16px;
+      background: rgba(255, 255, 255, 0.03);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      font-size: 0.85rem;
+      color: #94a3b8;
+      display: flex;
+      justify-content: space-between;
+    }
+    .train-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+    }
+    .train-item {
+      padding: 10px 12px;
+      border-radius: 8px;
+      margin-bottom: 6px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .train-item:hover, .train-item.active {
+      background: rgba(249, 115, 22, 0.15);
+      border-color: #f97316;
+    }
+    .train-item-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+    .train-name { font-weight: 600; font-size: 0.9rem; color: #fff; }
+    .train-tag { font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
+    .tag-eksekutif { background: #0284c7; color: #fff; }
+    .tag-krl { background: #dc2626; color: #fff; }
+    .train-route { font-size: 0.75rem; color: #94a3b8; }
+
+    /* Custom Train Marker Icon */
+    .train-marker-icon {
+      display: flex; justify-content: center; align-items: center;
+      transition: transform 0.2s linear;
+    }
+    .marker-glow {
+      filter: drop-shadow(0 0 6px rgba(249, 115, 22, 0.9));
     }
   </style>
 </head>
 <body>
 
-  <div id="game-container">
-    <div id="game"></div>
+  <!-- Top Bar -->
+  <div class="top-bar">
+    <div class="brand">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="2.5"><rect x="4" y="3" width="16" height="16" rx="2"/><path d="M4 11h16"/><path d="M12 3v8"/></svg>
+      168<span>RAILWAYS</span> PRO
+    </div>
+    <div class="search-box">
+      <input type="text" id="search-input" placeholder="Cari KA / Rute..." oninput="filterTrains()">
+    </div>
+    <div class="clock-badge" id="live-clock">00:00:00 WIB</div>
   </div>
 
+  <!-- Sidebar Live Trains -->
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <span>ARMADA TERPANTAU</span>
+      <span id="train-count" style="color: #38bdf8; font-weight: bold;">0 KA</span>
+    </div>
+    <div class="train-list" id="train-list-container">
+      <!-- Items generated dynamically -->
+    </div>
+  </div>
+
+  <!-- Peta -->
+  <div id="map"></div>
+
+  <!-- Leaflet & Geospasial Engine -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/@turf/turf@6.5.0/turf.min.js"></script>
+
   <script>
-    // Konfigurasi Emulator PSP
-    window.EJS_player = "#game";
-    window.EJS_core = "psp";
-    window.EJS_threads = true;
+    // 1. Inisialisasi Peta (Base Dark Map)
+    const map = L.map('map', { zoomControl: false }).setView([-7.3, 110.5], 8);
+    L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-    // Link game ISO yang sudah diperbaiki (dengan -usa)
-    window.EJS_gameUrl = "https://archive.org/download/naruto-ultimate-ninja-heroes-2-the-phantom-fortress-usa/Naruto%20-%20Ultimate%20Ninja%20Heroes%202%20-%20The%20Phantom%20Fortress.iso";
+    // Layer 1: Dark Matter Carto (Latar Belakang Gelap)
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
 
-    window.EJS_pathtodata = "https://cdn.emulatorjs.org/stable/data/";
-    window.EJS_netplayUrl = "https://netplay.emulatorjs.org";
+    // Layer 2: OpenRailwayMap Resmi (Menampilkan SEMUA rel kereta asli, stasiun, dan wesel di seluruh Indonesia)
+    L.tileLayer('https://{s}.tiles.openrailwaymap.org/standard/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      opacity: 0.85,
+      attribution: 'Map data: &copy; <a href="https://www.openrailwaymap.org/">OpenRailwayMap</a>'
+    }).addTo(map);
+
+    // 2. Database Koridor Rute Lengkap
+    // Jalur Utara (Gambir - Cirebon - Tegal - Semarang - Bojonegoro - Surabaya Pasarturi)
+    const routeUtara = [
+      [-6.1767, 106.8306], [-6.2361, 107.0002], [-6.4025, 107.4478], [-6.7053, 108.5554],
+      [-6.8694, 109.1402], [-6.8703, 109.6753], [-6.9644, 110.4281], [-7.1633, 111.8869],
+      [-7.2484, 112.7314]
+    ];
+
+    // Jalur Selatan (Bandung - Tasik - Kroya - Jogja - Solo - Madiun - Surabaya Gubeng)
+    const routeSelatan = [
+      [-6.9145, 107.6025], [-7.3274, 108.2207], [-7.6322, 109.2458], [-7.7892, 110.3635],
+      [-7.5568, 110.8219], [-7.5606, 111.6566], [-7.5458, 112.2331], [-7.2654, 112.7519]
+    ];
+
+    // Jalur Jakarta - Jogja (Gambir - Cirebon - Purwokerto - Yogyakarta)
+    const routeTaksaka = [
+      [-6.1767, 106.8306], [-6.2361, 107.0002], [-6.7053, 108.5554], [-7.4243, 109.2302],
+      [-7.6322, 109.2458], [-7.7892, 110.3635]
+    ];
+
+    // Jalur KRL Lintas Bogor (Jakarta Kota - Manggarai - Depok - Bogor)
+    const routeKRLBogor = [
+      [-6.1376, 106.8146], [-6.2099, 106.8501], [-6.3054, 106.8329], [-6.4058, 106.8184],
+      [-6.5944, 106.7906]
+    ];
+
+    // Konversi polyline ke Turf LineString untuk kalkulasi geometri presisi
+    function toLine(coords) {
+      return turf.lineString(coords.map(c => [c[1], c[0]]));
+    }
+
+    const lineUtara = toLine(routeUtara);
+    const lineSelatan = toLine(routeSelatan);
+    const lineTaksaka = toLine(routeTaksaka);
+    const lineKRL = toLine(routeKRLBogor);
+
+    // 3. Database Kereta Api Realistis (GAPEKA Simulator Data)
+    const activeTrains = [
+      {
+        id: "KA-1", no: "1", name: "KA Argo Bromo Anggrek", type: "Eksekutif",
+        route: "Surabaya Pasarturi → Gambir", line: lineUtara,
+        totalKm: turf.length(lineUtara, {units: 'km'}), dist: 180, speed: 110, dir: -1, color: "#f97316"
+      },
+      {
+        id: "KA-2", no: "2", name: "KA Argo Bromo Anggrek", type: "Eksekutif",
+        route: "Gambir → Surabaya Pasarturi", line: lineUtara,
+        totalKm: turf.length(lineUtara, {units: 'km'}), dist: 460, speed: 115, dir: 1, color: "#f97316"
+      },
+      {
+        id: "KA-5", no: "5", name: "KA Argo Wilis", type: "Eksekutif",
+        route: "Surabaya Gubeng → Bandung", line: lineSelatan,
+        totalKm: turf.length(lineSelatan, {units: 'km'}), dist: 310, speed: 95, dir: -1, color: "#38bdf8"
+      },
+      {
+        id: "KA-7", no: "7", name: "KA Taksaka", type: "Eksekutif",
+        route: "Gambir → Yogyakarta", line: lineTaksaka,
+        totalKm: turf.length(lineTaksaka, {units: 'km'}), dist: 240, speed: 105, dir: 1, color: "#eab308"
+      },
+      {
+        id: "KA-68", no: "68", name: "KA Lodaya", type: "Eksekutif / Ekonomi",
+        route: "Bandung → Solo Balapan", line: lineSelatan,
+        totalKm: turf.length(lineSelatan, {units: 'km'}), dist: 120, speed: 85, dir: 1, color: "#a855f7"
+      },
+      {
+        id: "KRL-1142", no: "1142", name: "Commuter Line Bogor", type: "KRL",
+        route: "Jakarta Kota → Bogor", line: lineKRL,
+        totalKm: turf.length(lineKRL, {units: 'km'}), dist: 25, speed: 70, dir: 1, color: "#ef4444"
+      }
+    ];
+
+    document.getElementById('train-count').innerText = `${activeTrains.length} KA`;
+
+    // 4. Custom Icon Lokomotif Realistis (Glowing Needle Pointer)
+    function getTrainIcon(color, angle) {
+      return L.divIcon({
+        className: 'train-marker-icon',
+        html: `
+          <div style="transform: rotate(${angle}deg);" class="marker-glow">
+            <svg width="26" height="26" viewBox="0 0 32 32">
+              <circle cx="16" cy="16" r="14" fill="#0b0f19" stroke="${color}" stroke-width="2.5" />
+              <polygon points="16,4 23,23 16,18 9,23" fill="${color}" />
+            </svg>
+          </div>
+        `,
+        iconSize: [26, 26],
+        iconAnchor: [13, 13]
+      });
+    }
+
+    // Pasang Marker dan Popup
+    activeTrains.forEach(tr => {
+      const pt = turf.along(tr.line, tr.dist, {units: 'km'});
+      const [lng, lat] = pt.geometry.coordinates;
+
+      tr.marker = L.marker([lat, lng], { icon: getTrainIcon(tr.color, 0) }).addTo(map);
+      tr.marker.bindPopup(`
+        <div style="color: #111; font-family: sans-serif; min-width: 180px;">
+          <h4 style="margin: 0; color: #f97316;">${tr.name}</h4>
+          <p style="margin: 4px 0; font-size: 0.8rem; color: #555;">${tr.route}</p>
+          <hr style="border: 0; border-top: 1px solid #ddd; margin: 6px 0;">
+          <div style="display: flex; justify-content: space-between; font-size: 0.8rem;">
+            <span>Kecepatan:</span> <strong>${tr.speed} km/h</strong>
+          </div>
+        </div>
+      `);
+    });
+
+    // 5. Render Sidebar List
+    function renderTrainList(trains) {
+      const container = document.getElementById('train-list-container');
+      container.innerHTML = '';
+      trains.forEach(tr => {
+        const item = document.createElement('div');
+        item.className = 'train-item';
+        item.onclick = () => focusTrain(tr);
+        item.innerHTML = `
+          <div class="train-item-header">
+            <span class="train-name">${tr.name}</span>
+            <span class="train-tag ${tr.type === 'KRL' ? 'tag-krl' : 'tag-eksekutif'}">${tr.type}</span>
+          </div>
+          <div class="train-route">${tr.route}</div>
+          <div style="display:flex; justify-content:space-between; margin-top:4px; font-size:0.75rem; color:#38bdf8;">
+            <span>Speed: ${tr.speed} km/h</span>
+            <span>Progress: ${Math.round((tr.dist/tr.totalKm)*100)}%</span>
+          </div>
+        `;
+        container.appendChild(item);
+      });
+    }
+    renderTrainList(activeTrains);
+
+    function focusTrain(tr) {
+      const pt = turf.along(tr.line, tr.dist, {units: 'km'});
+      const [lng, lat] = pt.geometry.coordinates;
+      map.flyTo([lat, lng], 13, { duration: 1.5 });
+      tr.marker.openPopup();
+    }
+
+    function filterTrains() {
+      const q = document.getElementById('search-input').value.toLowerCase();
+      const filtered = activeTrains.filter(t => t.name.toLowerCase().includes(q) || t.route.toLowerCase().includes(q));
+      renderTrainList(filtered);
+    }
+
+    // 6. Real-Time Engine (Posisi Kereta Bergerak Halus & Sudut Rotasi Mengikuti Tikungan Rel)
+    const FPS = 30;
+    setInterval(() => {
+      activeTrains.forEach(tr => {
+        const delta = (tr.speed / 3600) / FPS * 15; // Kecepatan simulasi
+        tr.dist += delta * tr.dir;
+
+        if (tr.dist >= tr.totalKm) { tr.dist = tr.totalKm; tr.dir = -1; }
+        else if (tr.dist <= 0) { tr.dist = 0; tr.dir = 1; }
+
+        const curPt = turf.along(tr.line, tr.dist, {units: 'km'});
+        const [lng, lat] = curPt.geometry.coordinates;
+
+        // Hitung sudut kemiringan rel (Bearing)
+        const nextDist = Math.min(tr.totalKm, Math.max(0, tr.dist + 0.1 * tr.dir));
+        const nextPt = turf.along(tr.line, nextDist, {units: 'km'});
+        const angle = turf.bearing(curPt, nextPt);
+
+        tr.marker.setLatLng([lat, lng]);
+        tr.marker.setIcon(getTrainIcon(tr.color, angle));
+      });
+    }, 1000 / FPS);
+
+    // Live Clock (WIB)
+    setInterval(() => {
+      const now = new Date();
+      document.getElementById('live-clock').innerText = now.toLocaleTimeString('id-ID') + ' WIB';
+    }, 1000);
   </script>
-  <script src="https://cdn.emulatorjs.org/stable/data/loader.js"></script>
 
 </body>
 </html>

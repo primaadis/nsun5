@@ -5,20 +5,26 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Naruto Ultimate Ninja Heroes 2</title>
 
-  <!-- Wajib ada agar threads PSP diizinkan browser -->
+  <!-- Skrip pendukung Threads PSP -->
   <script src="coi-serviceworker.js"></script>
 
   <style>
     body, html {
-      margin: 0; padding: 0;
-      width: 100%; height: 100%;
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
       background-color: #000;
-      display: flex; justify-content: center; align-items: center;
+      display: flex;
+      justify-content: center;
+      align-items: center;
       overflow: hidden;
     }
     #game-container {
-      width: 100%; height: 100%;
-      max-width: 1280px; max-height: 720px;
+      width: 100%;
+      height: 100%;
+      max-width: 1280px;
+      max-height: 720px;
     }
   </style>
 </head>
@@ -29,14 +35,16 @@
   </div>
 
   <script>
+    // Konfigurasi Emulator PSP
     window.EJS_player = "#game";
     window.EJS_core = "psp";
-    window.EJS_threads = true; // Wajib true untuk core PSP
+    window.EJS_threads = true;
 
-    // Ganti dengan link Archive.org yang sudah dipastikan TIDAK 404:
-    window.EJS_gameUrl = "https://archive.org/download/naruto-ultimate-ninja-heroes-2-the-phantom-fortress/Naruto%20-%20Ultimate%20Ninja%20Heroes%202%20-%20The%20Phantom%20Fortress.iso";
+    // Link game ISO yang sudah diperbaiki (dengan -usa)
+    window.EJS_gameUrl = "https://archive.org/download/naruto-ultimate-ninja-heroes-2-the-phantom-fortress-usa/Naruto%20-%20Ultimate%20Ninja%20Heroes%202%20-%20The%20Phantom%20Fortress.iso";
 
     window.EJS_pathtodata = "https://cdn.emulatorjs.org/stable/data/";
+    window.EJS_netplayUrl = "https://netplay.emulatorjs.org";
   </script>
   <script src="https://cdn.emulatorjs.org/stable/data/loader.js"></script>
 

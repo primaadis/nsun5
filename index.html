@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Naruto Shippuden Ultimate Ninja 5</title>
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background-color: #000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+    }
+    #game-container {
+      width: 100%;
+      height: 100%;
+      max-width: 1280px;
+      max-height: 720px;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="game-container">
+    <div id="game"></div>
+  </div>
+
+  <script>
+    // Konfigurasi Emulator
+    window.EJS_player = "#game";
+    window.EJS_core = "ps2";
+
+    // MASUKKAN LINK ARCHIVE.ORG ANDA DI DALAM TANDA PETIK DI BAWAH INI:
+    window.EJS_gameUrl = "https://archive.org/download/nsun-5/Naruto%20Shippuden%20-%20Ultimate%20Ninja%205%20%28Europe%29.iso";
+
+    // Resource Core EmulatorJS
+    window.EJS_pathtodata = "https://cdn.emulatorjs.org/stable/data/";
+    
+    // Server Netplay untuk Multiplayer
+    window.EJS_netplayUrl = "https://netplay.emulatorjs.org";
+  </script>
+  <script src="https://cdn.emulatorjs.org/stable/data/loader.js"></script>
+
+</body>
+</html>

@@ -3,28 +3,18 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Naruto Ultimate Ninja Heroes 2 - PSP</title>
-
-  <!-- Script agar fitur Threads/SharedArrayBuffer PSP aktif di GitHub Pages -->
-  <script src="coi-serviceworker.js"></script>
-
+  <title>Naruto Ultimate Ninja Heroes 2</title>
   <style>
     body, html {
-      margin: 0;
-      padding: 0;
-      width: 100%;
-      height: 100%;
+      margin: 0; padding: 0;
+      width: 100%; height: 100%;
       background-color: #000;
-      display: flex;
-      justify-content: center;
-      align-items: center;
+      display: flex; justify-content: center; align-items: center;
       overflow: hidden;
     }
     #game-container {
-      width: 100%;
-      height: 100%;
-      max-width: 1280px;
-      max-height: 720px;
+      width: 100%; height: 100%;
+      max-width: 1280px; max-height: 720px;
     }
   </style>
 </head>
@@ -35,18 +25,14 @@
   </div>
 
   <script>
-    // Konfigurasi Emulator PSP
     window.EJS_player = "#game";
-    window.EJS_core = "psp"; // Menggunakan core PPSSPP resmi
-    window.EJS_threads = true; // Wajib true untuk performa lancar PSP
-
-    // Link game ISO PSP Anda dari Archive.org
+    window.EJS_core = "psp";
+    
+    // Gunakan Direct Link (atau link ia800... dari langkah 2)
     window.EJS_gameUrl = "https://archive.org/download/naruto-ultimate-ninja-heroes-2-the-phantom-fortress/Naruto%20-%20Ultimate%20Ninja%20Heroes%202%20-%20The%20Phantom%20Fortress.iso";
-
+    
     window.EJS_pathtodata = "https://cdn.emulatorjs.org/stable/data/";
-    window.EJS_netplayUrl = "https://netplay.emulatorjs.org";
   </script>
-  
   <script src="https://cdn.emulatorjs.org/stable/data/loader.js"></script>
 
 </body>
